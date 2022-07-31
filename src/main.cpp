@@ -4,7 +4,7 @@
 #include <WiFi.h>
 
 #define LED_PIN A0
-#define LED_COUNT 10
+#define LED_COUNT 100
 
 const char* ssid = "***REMOVED***";
 const char* password = "***REMOVED***";
@@ -29,7 +29,6 @@ IPAddress primaryDNS(1, 1, 1, 1);
 IPAddress secondaryDNS(1, 0, 0, 1);
 
 Adafruit_NeoPixel strip(LED_COUNT, LED_PIN, NEO_GRB + NEO_KHZ800);
-Adafruit_NeoPixel pixels(1, PIN_NEOPIXEL);
 
 void reconnect() {
   while (!client.connected()) {
@@ -69,26 +68,26 @@ int brightness = 100;
 String power = "ON";
 
 void publishBrightness() {
-  pixels.setPixelColor(0, pixels.Color(r, g, b));
-  pixels.setBrightness(brightness);
-  pixels.show();
+  strip.fill(strip.Color(r, g, b));
+  strip.setBrightness(brightness);
+  strip.show();
   client.publish(mqtt_brightness_status_topic.c_str(), String(brightness).c_str());
 }
 
 void publishRgb() {
-  pixels.setPixelColor(0, pixels.Color(r, g, b));
-  pixels.show();
-  client.publish(mqtt_rgb_status_topic.c_str(), (String(r) + "," + String(g) + "," + String(b)).c_str());
+  strip.fill(strip.Color(r, g, b));
+  strip.show();
+  client.publish(mqtt_rgb_status_topic.c_str(), (String(g) + "," + String(r) + "," + String(b)).c_str());
 }
 
 void publishPower() {
   if (power == "ON") {
-    pixels.setPixelColor(0, pixels.Color(r, g, b));
+    strip.fill(strip.Color(r, g, b));
   } else {
-    pixels.setPixelColor(0, pixels.Color(0, 0, 0));
+    strip.fill(strip.Color(0, 0, 0));
   }
 
-  pixels.show();
+  strip.show();
   client.publish(mqtt_power_status_topic.c_str(), power.c_str());
 }
 
@@ -112,8 +111,8 @@ void on_command(char* rawTopic, byte* payload, unsigned int length) {
     uint8_t firstIndex = parsed.indexOf(',');
     uint8_t lastIndex = parsed.lastIndexOf(',');
 
-    r = parsed.substring(0, firstIndex).toInt();
-    g = parsed.substring(firstIndex + 1, lastIndex).toInt();
+    g = parsed.substring(0, firstIndex).toInt();
+    r = parsed.substring(firstIndex + 1, lastIndex).toInt();
     b = parsed.substring(lastIndex + 1).toInt();
 
     publishRgb();
@@ -137,11 +136,6 @@ void init_mqtt() {
 }
 
 void setup() {
-#if defined(NEOPIXEL_POWER)
-  pinMode(NEOPIXEL_POWER, OUTPUT);
-  digitalWrite(NEOPIXEL_POWER, HIGH);
-#endif
-
   Serial.begin(112500);
 
   Serial.println("Connecting to WiFi");
@@ -170,7 +164,7 @@ void setup() {
 
   Serial.println(client.state());
 
-  pixels.begin();
+  strip.begin();
 
   init_strip();
   init_mqtt();
