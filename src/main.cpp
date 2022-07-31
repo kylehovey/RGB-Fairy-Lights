@@ -14,10 +14,12 @@ const char* mqtt_server = "192.168.100.42";
 const String mqtt_power_command_topic = "home/light/qt_py_fairy/power/set";
 const String mqtt_rgb_command_topic = "home/light/qt_py_fairy/rgb/set";
 const String mqtt_brightness_command_topic = "home/light/qt_py_fairy/brightness/set";
+const String mqtt_effect_command_topic = "home/light/qt_py_fairy/effect/set";
 
 const String mqtt_power_status_topic = "home/light/qt_py_fairy/power/status";
 const String mqtt_rgb_status_topic = "home/light/qt_py_fairy/rgb/status";
 const String mqtt_brightness_status_topic = "home/light/qt_py_fairy/brightness/status";
+const String mqtt_effect_status_topic = "home/light/qt_py_fairy/effect/status";
 
 WiFiClient espClient;
 PubSubClient client(espClient);
@@ -65,9 +67,13 @@ int r = 100;
 int g = 0;
 int b = 100;
 int brightness = 100;
+long t = 0;
 String power = "ON";
+String effect = "rainbow";
 
 void publishBrightness() {
+  if (effect != "static") return;
+
   strip.fill(strip.Color(r, g, b));
   strip.setBrightness(brightness);
   strip.show();
@@ -75,6 +81,8 @@ void publishBrightness() {
 }
 
 void publishRgb() {
+  if (effect != "static") return;
+
   strip.fill(strip.Color(r, g, b));
   strip.show();
   client.publish(mqtt_rgb_status_topic.c_str(), (String(g) + "," + String(r) + "," + String(b)).c_str());
@@ -89,6 +97,16 @@ void publishPower() {
 
   strip.show();
   client.publish(mqtt_power_status_topic.c_str(), power.c_str());
+}
+
+void publishEffect() {
+  if (effect == "static") {
+    strip.fill(strip.Color(r, g, b));
+    strip.setBrightness(brightness);
+    strip.show();
+  }
+
+  client.publish(mqtt_effect_status_topic.c_str(), effect.c_str());
 }
 
 void on_command(char* rawTopic, byte* payload, unsigned int length) {
@@ -116,6 +134,10 @@ void on_command(char* rawTopic, byte* payload, unsigned int length) {
     b = parsed.substring(lastIndex + 1).toInt();
 
     publishRgb();
+  } else if (topic == mqtt_effect_command_topic) {
+    effect = parsed;
+
+    publishEffect();
   }
 
   Serial.println(topic);
@@ -126,10 +148,12 @@ void init_mqtt() {
   client.subscribe(mqtt_power_command_topic.c_str());
   client.subscribe(mqtt_brightness_command_topic.c_str());
   client.subscribe(mqtt_rgb_command_topic.c_str());
+  client.subscribe(mqtt_effect_command_topic.c_str());
 
   publishPower();
   publishBrightness();
   publishRgb();
+  publishEffect();
 
   Serial.println("Setting up MQTT callback");
   client.setCallback(on_command);
@@ -170,7 +194,24 @@ void setup() {
   init_mqtt();
 }
 
+void effectLoop() {
+  if (effect == "static" || power == "off") return;
+
+  if (effect == "rainbow") {
+    long now = millis();
+
+    if (now - t > 100) {
+      long iterations = (long)round(now / 100) % 1280;
+      strip.rainbow(256 * iterations);
+      strip.show();
+
+      t = millis();
+    }
+  }
+}
+
 void loop() {
   client.loop();
-  // rainbow(100);
+
+  effectLoop();
 }
