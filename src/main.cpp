@@ -10,9 +10,6 @@ const char* ssid = "***REMOVED***";
 const char* password = "***REMOVED***";
 
 const char* mqtt_server = "192.168.100.42";
-// const char* mqtt_discovery_topic = "homeassistant/light/rgb_fairy_lights/bedroom_fairy_lights/config";
-// const String mqtt_device_map = "{\"configuration_url\":\"http://192.168.100.74/\", \"name\":\"Rainbow Fairy Lights\"}";
-//
 
 const String mqtt_power_command_topic = "home/light/qt_py_fairy/power/set";
 const String mqtt_rgb_command_topic = "home/light/qt_py_fairy/rgb/set";
@@ -21,8 +18,6 @@ const String mqtt_brightness_command_topic = "home/light/qt_py_fairy/brightness/
 const String mqtt_power_status_topic = "home/light/qt_py_fairy/power/status";
 const String mqtt_rgb_status_topic = "home/light/qt_py_fairy/rgb/status";
 const String mqtt_brightness_status_topic = "home/light/qt_py_fairy/brightness/status";
-
-// const String discovery_payload = "{\"device_map\":" + mqtt_device_map + ", \"rgb_state_topic\":\"" + mqtt_state_topic + "\", \"rgb_command_topic\":\"" + mqtt_command_topic + "\", \"supported_color_modes\":[\"rgb\"], \"color_mode\": true }";
 
 WiFiClient espClient;
 PubSubClient client(espClient);
@@ -34,6 +29,7 @@ IPAddress primaryDNS(1, 1, 1, 1);
 IPAddress secondaryDNS(1, 0, 0, 1);
 
 Adafruit_NeoPixel strip(LED_COUNT, LED_PIN, NEO_GRB + NEO_KHZ800);
+Adafruit_NeoPixel pixels(1, PIN_NEOPIXEL);
 
 void reconnect() {
   while (!client.connected()) {
@@ -66,35 +62,86 @@ void init_strip() {
   strip.setBrightness(50);
 }
 
-void on_command(char* topic, byte* payload, unsigned int length) {
+int r = 100;
+int g = 0;
+int b = 100;
+int brightness = 100;
+String power = "ON";
+
+void publishBrightness() {
+  pixels.setPixelColor(0, pixels.Color(r, g, b));
+  pixels.setBrightness(brightness);
+  pixels.show();
+  client.publish(mqtt_brightness_status_topic.c_str(), String(brightness).c_str());
+}
+
+void publishRgb() {
+  pixels.setPixelColor(0, pixels.Color(r, g, b));
+  pixels.show();
+  client.publish(mqtt_rgb_status_topic.c_str(), (String(r) + "," + String(g) + "," + String(b)).c_str());
+}
+
+void publishPower() {
+  if (power == "ON") {
+    pixels.setPixelColor(0, pixels.Color(r, g, b));
+  } else {
+    pixels.setPixelColor(0, pixels.Color(0, 0, 0));
+  }
+
+  pixels.show();
+  client.publish(mqtt_power_status_topic.c_str(), power.c_str());
+}
+
+void on_command(char* rawTopic, byte* payload, unsigned int length) {
+  String topic = String(rawTopic);
   String parsed = String((char*) payload).substring(0, length);
+
+  if (topic == mqtt_power_command_topic) {
+    Serial.print("Setting power to ");
+    Serial.println(parsed);
+
+    power = parsed;
+    publishPower();
+  } else if (topic == mqtt_brightness_command_topic) {
+    Serial.print("Setting brightness to ");
+    Serial.println(String(parsed).toInt());
+
+    brightness = String(parsed).toInt();
+    publishBrightness();
+  } else if (topic == mqtt_rgb_command_topic) {
+    uint8_t firstIndex = parsed.indexOf(',');
+    uint8_t lastIndex = parsed.lastIndexOf(',');
+
+    r = parsed.substring(0, firstIndex).toInt();
+    g = parsed.substring(firstIndex + 1, lastIndex).toInt();
+    b = parsed.substring(lastIndex + 1).toInt();
+
+    publishRgb();
+  }
+
   Serial.println(topic);
   Serial.println(parsed);
 }
 
 void init_mqtt() {
-  // Serial.println("Publishing discovery payload with topic/payload:");
-  // Serial.println(mqtt_discovery_topic);
-  // Serial.println(discovery_payload);
-  //
-  // success = client.publish(mqtt_discovery_topic, discovery_payload.c_str(), true);
-  //
-  // Serial.print("Success: ");
-  // Serial.println(success);
-
   client.subscribe(mqtt_power_command_topic.c_str());
   client.subscribe(mqtt_brightness_command_topic.c_str());
   client.subscribe(mqtt_rgb_command_topic.c_str());
 
-  client.publish(mqtt_power_status_topic.c_str(), "ON");
-  client.publish(mqtt_brightness_status_topic.c_str(), "100");
-  client.publish(mqtt_rgb_status_topic.c_str(), "100,0,100");
+  publishPower();
+  publishBrightness();
+  publishRgb();
 
   Serial.println("Setting up MQTT callback");
   client.setCallback(on_command);
 }
 
 void setup() {
+#if defined(NEOPIXEL_POWER)
+  pinMode(NEOPIXEL_POWER, OUTPUT);
+  digitalWrite(NEOPIXEL_POWER, HIGH);
+#endif
+
   Serial.begin(112500);
 
   Serial.println("Connecting to WiFi");
@@ -122,6 +169,8 @@ void setup() {
   }
 
   Serial.println(client.state());
+
+  pixels.begin();
 
   init_strip();
   init_mqtt();
