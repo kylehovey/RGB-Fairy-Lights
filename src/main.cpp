@@ -44,17 +44,18 @@ void reconnect() {
   }
 }
 
-/**
- * Rainbow cycle the strip
- * @param wait Millisecond delay between frames
- */
-void rainbow(int wait) {
-  for(long firstPixelHue = 0; firstPixelHue < 5*65536; firstPixelHue += 256) {
-    strip.rainbow(firstPixelHue);
-    strip.show();
-    client.loop();
-    delay(wait);
-  }
+// Generated with:
+// Array(100).fill().map(() => Math.random()).map(x => x * Math.PI * 2).map(x => x.toFixed(2)).join(',')
+float fireflyPhases[] = {5.04,5.81,4.95,6.19,2.88,3.42,5.60,2.07,5.27,5.89,0.41,3.66,1.61,4.67,6.05,2.91,3.42,0.36,4.71,5.04,4.26,6.15,1.68,1.53,2.43,6.14,4.38,1.80,0.17,5.15,5.11,1.67,5.03,0.31,5.95,1.95,4.91,1.62,3.57,5.43,4.28,2.52,2.22,2.52,5.18,1.20,0.16,0.99,4.23,5.59,1.39,3.46,1.67,5.61,1.12,5.16,1.79,5.49,1.48,0.84,4.61,0.04,2.81,3.15,3.70,2.97,5.27,3.13,1.98,5.28,2.20,0.65,5.42,5.00,1.45,0.91,2.87,4.02,5.46,4.29,5.61,5.87,0.57,0.57,4.80,1.80,6.05,3.96,1.53,0.81,1.73,6.21,2.25,0.95,0.89,3.15,4.28,4.22,4.76,4.43};
+uint32_t fireflyHue(double t, float phase = 0) {
+  float E = (sin(t + phase) + cos(5.0*t + phase) - cos(10.0*t + phase) + sin(25.0*t + phase)) / 35.0;
+  float x = 20.0 * sin(0.5 * t + phase);
+  float fire = 2.0 / (1.0 + exp(x * x));
+  float intensity = fire + (1 - fire) * E;
+  float hue = 130.0 * intensity + 280.0 * (1.0 - intensity);
+  float beegHue = hue * 65535.0 / 360.0;
+
+  return uint32_t(beegHue);
 }
 
 void init_strip() {
@@ -69,7 +70,7 @@ int b = 100;
 int brightness = 100;
 long t = 0;
 String power = "ON";
-String effect = "rainbow";
+String effect = "static";
 
 void publishBrightness() {
   if (effect != "static") return;
@@ -197,16 +198,26 @@ void setup() {
 void effectLoop() {
   if (effect == "static" || power == "off") return;
 
-  if (effect == "rainbow") {
-    long now = millis();
+  long now = millis();
+  bool frame = now - t > 100;
 
-    if (now - t > 100) {
+  if (frame) {
+    if (effect == "rainbow") {
       long iterations = (long)round(now / 100) % 1280;
       strip.rainbow(256 * iterations);
       strip.show();
+    } if (effect == "fireflies") {
+      float pTime = (float)t / 2000.0;
 
-      t = millis();
+      for (int i = 0; i < LED_COUNT; ++i) {
+        float hue = fireflyHue(pTime, fireflyPhases[i]);
+        strip.setPixelColor(i, strip.ColorHSV(hue, 255, brightness));
+      }
+
+      strip.show();
     }
+
+    t = millis();
   }
 }
 
