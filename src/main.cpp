@@ -68,7 +68,6 @@ int r = 100;
 int g = 0;
 int b = 100;
 int brightness = 100;
-long t = 0;
 String power = "ON";
 String effect = "static";
 
@@ -198,26 +197,21 @@ void setup() {
 void effectLoop() {
   if (effect == "static" || power == "off") return;
 
-  long now = millis();
-  bool frame = now - t > 100;
+  long t = millis();
 
-  if (frame) {
-    if (effect == "rainbow") {
-      long iterations = (long)round(now / 100) % 1280;
-      strip.rainbow(256 * iterations);
-      strip.show();
-    } if (effect == "fireflies") {
-      float pTime = (float)t / 2000.0;
+  if (effect == "rainbow") {
+    long iterations = (long)round(t / 100) % 1280;
+    strip.rainbow(256 * iterations);
+    strip.show();
+  } if (effect == "fireflies") {
+    float pTime = (float)t / 2000.0;
 
-      for (int i = 0; i < LED_COUNT; ++i) {
-        float hue = fireflyHue(pTime, fireflyPhases[i]);
-        strip.setPixelColor(i, strip.ColorHSV(hue, 255, brightness));
-      }
-
-      strip.show();
+    for (int i = 0; i < LED_COUNT; ++i) {
+      float hue = fireflyHue(pTime, fireflyPhases[i]);
+      strip.setPixelColor(i, strip.ColorHSV(hue, 255, brightness));
     }
 
-    t = millis();
+    strip.show();
   }
 }
 
