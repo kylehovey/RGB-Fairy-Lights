@@ -81,48 +81,26 @@ int r = 100;
 int g = 0;
 int b = 100;
 int brightness = 100;
-String power = "ON";
+String power = "on";
 String effect = "static";
 
 void publishBrightness() {
-  if (effect != "static") return;
-
-  strip.fill(strip.Color(r, g, b));
-  strip.setBrightness(brightness);
-  strip.show();
   client.publish(mqtt_brightness_status_topic.c_str(), String(brightness).c_str());
 }
 
 void publishRgb() {
-  if (effect != "static") return;
-
-  strip.fill(strip.Color(r, g, b));
-  strip.show();
   client.publish(mqtt_rgb_status_topic.c_str(), (String(g) + "," + String(r) + "," + String(b)).c_str());
 }
 
 void publishPower() {
-  if (power == "ON") {
-    strip.fill(strip.Color(r, g, b));
-  } else {
-    strip.fill(strip.Color(0, 0, 0));
-  }
-
-  strip.show();
   client.publish(mqtt_power_status_topic.c_str(), power.c_str());
 }
 
 void publishEffect() {
-  if (effect == "static") {
-    strip.fill(strip.Color(r, g, b));
-    strip.setBrightness(brightness);
-    strip.show();
-  }
-
   client.publish(mqtt_effect_status_topic.c_str(), effect.c_str());
 }
 
-void on_command(char* rawTopic, byte* payload, unsigned int length) {
+void onCommand(char* rawTopic, byte* payload, unsigned int length) {
   String topic = String(rawTopic);
   String parsed = String((char*) payload).substring(0, length);
 
@@ -169,7 +147,7 @@ void init_mqtt() {
   publishEffect();
 
   Serial.println("Setting up MQTT callback");
-  client.setCallback(on_command);
+  client.setCallback(onCommand);
 }
 
 void setup() {
@@ -208,14 +186,23 @@ void setup() {
 }
 
 void effectLoop() {
-  if (effect == "static" || power == "off") return;
+  if (power == "OFF") {
+    strip.fill(strip.Color(0, 0, 0));
+    strip.show();
+
+    return;
+  };
+
+  strip.setBrightness(brightness);
 
   long t = millis();
 
-  if (effect == "rainbow") {
+  if (effect == "static") {
+    strip.fill(strip.Color(r, g, b));
+    strip.setBrightness(brightness);
+  } else if (effect == "rainbow") {
     long iterations = t % 128000;
     strip.rainbow(round(256.0 * iterations / 100.0));
-    strip.show();
   } else if (effect == "fireflies") {
     float pTime = (float)t / 2000.0;
 
@@ -223,8 +210,6 @@ void effectLoop() {
       float hue = fireflyHue(pTime, randomPhases[i]);
       strip.setPixelColor(i, strip.ColorHSV(hue, 255, brightness));
     }
-
-    strip.show();
   } else if (effect == "aurora") {
     float pTime = (float)t / 4000.0;
 
@@ -232,8 +217,6 @@ void effectLoop() {
       float hue = auroraHue(pTime, randomPhases[i], 282.0, 350.0);
       strip.setPixelColor(i, strip.ColorHSV(hue, 255, brightness));
     }
-
-    strip.show();
   } else if (effect == "torchlight") {
     float pTime = (float)t / 1000.0;
 
@@ -241,9 +224,9 @@ void effectLoop() {
       float hue = auroraHue(pTime, randomPhases[i], 100.0, 130.0);
       strip.setPixelColor(i, strip.ColorHSV(hue, 255, brightness));
     }
-
-    strip.show();
   }
+
+  strip.show();
 }
 
 void loop() {
