@@ -62,7 +62,7 @@ int b = 100;
 int hue = getHue(r, g, b);
 int brightness = 255;
 String power = "on";
-String effect = "static";
+String effect = "fireflies";
 
 void reconnect() {
   while (!client.connected()) {
