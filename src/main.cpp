@@ -30,7 +30,14 @@ IPAddress subnet(255, 255, 255, 0);
 IPAddress primaryDNS(1, 1, 1, 1);
 IPAddress secondaryDNS(1, 0, 0, 1);
 
-Adafruit_NeoPixel strip(LED_COUNT, LED_PIN, NEO_GRB + NEO_KHZ800);
+Adafruit_NeoPixel strip(LED_COUNT, LED_PIN, NEO_RGB + NEO_KHZ800);
+
+int r = 100;
+int g = 0;
+int b = 100;
+int brightness = 255;
+String power = "on";
+String effect = "static";
 
 void reconnect() {
   while (!client.connected()) {
@@ -52,15 +59,24 @@ float beegHueFromSmol(float hue) {
   return hue * 65535.0 / 360.0;
 }
 
-uint32_t fireflyHue(float t, float phase = 0) {
+float fireflyActivation(float t, float phase = 0) {
   float E = (sin(t + phase) + cos(5.0*t + phase) - cos(10.0*t + phase) + sin(25.0*t + phase)) / 35.0;
   float x = 20.0 * sin(0.5 * t + phase);
   float fire = 2.0 / (1.0 + exp(x * x));
   float intensity = fire + (1 - fire) * E;
-  float hue = 130.0 * intensity + 280.0 * (1.0 - intensity);
+
+  return intensity;
+}
+
+uint32_t fireflyHue(float intensity) {
+  float hue = 63.0 * intensity + 262.0 * (1.0 - intensity);
   float beegHue = beegHueFromSmol(hue);
 
   return uint32_t(beegHue);
+}
+
+float fireflyBrightness(float intensity) {
+  return float(brightness) / (2.0 * (1.0 + exp(-8.0 * (intensity - 0.5)))) + 0.5;
 }
 
 uint32_t auroraHue(float t, float phase, float beginningHue, float endingHue) {
@@ -77,19 +93,12 @@ void init_strip() {
   strip.setBrightness(50);
 }
 
-int r = 100;
-int g = 0;
-int b = 100;
-int brightness = 100;
-String power = "on";
-String effect = "static";
-
 void publishBrightness() {
   client.publish(mqtt_brightness_status_topic.c_str(), String(brightness).c_str());
 }
 
 void publishRgb() {
-  client.publish(mqtt_rgb_status_topic.c_str(), (String(g) + "," + String(r) + "," + String(b)).c_str());
+  client.publish(mqtt_rgb_status_topic.c_str(), (String(r) + "," + String(g) + "," + String(b)).c_str());
 }
 
 void publishPower() {
@@ -120,8 +129,8 @@ void onCommand(char* rawTopic, byte* payload, unsigned int length) {
     uint8_t firstIndex = parsed.indexOf(',');
     uint8_t lastIndex = parsed.lastIndexOf(',');
 
-    g = parsed.substring(0, firstIndex).toInt();
-    r = parsed.substring(firstIndex + 1, lastIndex).toInt();
+    r = parsed.substring(0, firstIndex).toInt();
+    g = parsed.substring(firstIndex + 1, lastIndex).toInt();
     b = parsed.substring(lastIndex + 1).toInt();
 
     publishRgb();
@@ -193,35 +202,38 @@ void effectLoop() {
     return;
   };
 
-  strip.setBrightness(brightness);
 
   long t = millis();
 
   if (effect == "static") {
+    strip.setBrightness(brightness);
     strip.fill(strip.Color(r, g, b));
     strip.setBrightness(brightness);
   } else if (effect == "rainbow") {
+    strip.setBrightness(brightness);
     long iterations = t % 128000;
     strip.rainbow(round(256.0 * iterations / 100.0));
   } else if (effect == "fireflies") {
     float pTime = (float)t / 2000.0;
 
     for (int i = 0; i < LED_COUNT; ++i) {
-      float hue = fireflyHue(pTime, randomPhases[i]);
-      strip.setPixelColor(i, strip.ColorHSV(hue, 255, brightness));
+      float intensity = fireflyActivation(pTime, randomPhases[i]);
+      float hue = fireflyHue(intensity);
+      float fBrightness = fireflyBrightness(intensity);
+      strip.setPixelColor(i, strip.ColorHSV(hue, 255, round(fBrightness)));
     }
   } else if (effect == "aurora") {
     float pTime = (float)t / 4000.0;
 
     for (int i = 0; i < LED_COUNT; ++i) {
-      float hue = auroraHue(pTime, randomPhases[i], 282.0, 350.0);
+      float hue = auroraHue(pTime, randomPhases[i], 150.0, 220.0);
       strip.setPixelColor(i, strip.ColorHSV(hue, 255, brightness));
     }
   } else if (effect == "torchlight") {
-    float pTime = (float)t / 1000.0;
+    float pTime = (float)t / 3000.0;
 
     for (int i = 0; i < LED_COUNT; ++i) {
-      float hue = auroraHue(pTime, randomPhases[i], 100.0, 130.0);
+      float hue = auroraHue(pTime, randomPhases[i], 18.0, 39.0);
       strip.setPixelColor(i, strip.ColorHSV(hue, 255, brightness));
     }
   }
