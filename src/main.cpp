@@ -32,9 +32,34 @@ IPAddress secondaryDNS(1, 0, 0, 1);
 
 Adafruit_NeoPixel strip(LED_COUNT, LED_PIN, NEO_RGB + NEO_KHZ800);
 
+// Adapted from https://stackoverflow.com/a/26233318
+int getHue(int red, int green, int blue) {
+    float minVal = float(min(min(red, green), blue));
+    float maxVal = float(max(max(red, green), blue));
+    float hueVal = 0.0;
+
+    if (minVal == maxVal) {
+        return 0;
+    }
+
+    if (maxVal == red) {
+        hueVal = (float(green) - float(blue)) / (maxVal - minVal);
+    } else if (maxVal == green) {
+        hueVal = 2.0 + (float(blue) - float(red)) / (maxVal - minVal);
+    } else {
+        hueVal = 4.0 + (float(red) - float(green)) / (maxVal - minVal);
+    }
+
+    hueVal = hueVal * 60.0;
+    if (hueVal < 0) hueVal = hueVal + 360.0;
+
+    return round(hueVal);
+}
+
 int r = 100;
 int g = 0;
 int b = 100;
+int hue = getHue(r, g, b);
 int brightness = 255;
 String power = "on";
 String effect = "static";
@@ -94,7 +119,9 @@ void init_strip() {
 }
 
 void publishBrightness() {
-  client.publish(mqtt_brightness_status_topic.c_str(), String(brightness).c_str());
+  int percentage = round(100.0 * float(brightness) / 255.0);
+
+  client.publish(mqtt_brightness_status_topic.c_str(), String(percentage).c_str());
 }
 
 void publishRgb() {
@@ -123,7 +150,7 @@ void onCommand(char* rawTopic, byte* payload, unsigned int length) {
     Serial.print("Setting brightness to ");
     Serial.println(String(parsed).toInt());
 
-    brightness = String(parsed).toInt();
+    brightness = round(255.0 * (String(parsed).toFloat() / 100.0));
     publishBrightness();
   } else if (topic == mqtt_rgb_command_topic) {
     uint8_t firstIndex = parsed.indexOf(',');
@@ -151,9 +178,9 @@ void init_mqtt() {
   client.subscribe(mqtt_effect_command_topic.c_str());
 
   publishPower();
-  publishBrightness();
   publishRgb();
   publishEffect();
+  publishBrightness();
 
   Serial.println("Setting up MQTT callback");
   client.setCallback(onCommand);
@@ -204,13 +231,11 @@ void effectLoop() {
 
 
   long t = millis();
+  strip.setBrightness(brightness);
 
   if (effect == "static") {
-    strip.setBrightness(brightness);
     strip.fill(strip.Color(r, g, b));
-    strip.setBrightness(brightness);
   } else if (effect == "rainbow") {
-    strip.setBrightness(brightness);
     long iterations = t % 128000;
     strip.rainbow(round(256.0 * iterations / 100.0));
   } else if (effect == "fireflies") {
@@ -227,6 +252,16 @@ void effectLoop() {
 
     for (int i = 0; i < LED_COUNT; ++i) {
       float hue = auroraHue(pTime, randomPhases[i], 150.0, 220.0);
+      strip.setPixelColor(i, strip.ColorHSV(hue, 255, brightness));
+    }
+  } else if (effect == "auroraSettable") {
+    float pTime = (float)t / 4000.0;
+
+    for (int i = 0; i < LED_COUNT; ++i) {
+      int deltaHue = 70;
+      int startingHue = hue;
+      int endingHue = hue + deltaHue % 360;
+      float hue = auroraHue(pTime, randomPhases[i], startingHue, endingHue);
       strip.setPixelColor(i, strip.ColorHSV(hue, 255, brightness));
     }
   } else if (effect == "torchlight") {
