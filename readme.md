@@ -11,6 +11,7 @@ This project includes all of the firmware and 3D files to create a driver for th
 * [5V/2A Power Supply](https://www.adafruit.com/product/276)
 * [3 Pin JST SM Plug](https://www.adafruit.com/product/1663)
 * [Panel Mount 2.1mm Barrel Jack](https://www.adafruit.com/product/610)
+* A diode
 * Hookup wire
 * Heat Shrink Tubing (highly recommended, but not strictly required)
 * USB C Cable
@@ -34,17 +35,18 @@ I used PLA to print the case. The models are located in the `models` directory o
 1. Strip the ends of two short wires and solder them to positive and ground on the barrel jack.
 2. Add heat shrink for the barrel jack connection.
 3. Insert the barrel jack into the case and tighten the nut to fasten it in place.
-4. Solder the positive wire to 5V on the ESP32, and ground to ground on the ESP32.
-5. Insert the bare wires from the male end of the JST connector into the upper slot on the case (above the USB slot where the ESP32 sits).
-6. Plug in the LED strip to the connector and match up the wires to find out which one is:
+4. Solder the ground wire to ground on the ESP32
+5. Solder the positive wire to the diode, then the diode to 5V on the ESP32 (make sure the polarity is right, and you may want to trim the diode leads to make it a bit shorter)
+6. Insert the bare wires from the male end of the JST connector into the upper slot on the case (above the USB slot where the ESP32 sits).
+7. Plug in the LED strip to the connector and match up the wires to find out which one is:
   * Ground - Black on the strand
   * Positive Voltage - Red on the strand
   * Data - Green on the strand
-7. Solder positive to positive on the ESP32 (shares the same positive connection with the power jack wire you just added).
-8. Solder ground to ground on the ESP32 (shares the same ground connection with the power jack wire you just added).
-9. Add the double-sided tape to the bottom of the ESP32 and insert the USB C port into the slot in the case, then fold the ESP32 into the walled area in the case (it should be snug).
-10. Snap the lid onto the case.
-11. If using leaded solder, wash your hands and then wipe down the case with a paper towel and throw the towel away afterwards.
+8. Solder positive to positive on the ESP32 (shares the same positive connection with the power jack wire you just added).
+9. Solder ground to ground on the ESP32 (shares the same ground connection with the power jack wire you just added).
+10. Add the double-sided tape to the bottom of the ESP32 and insert the USB C port into the slot in the case, then fold the ESP32 into the walled area in the case (it should be snug).
+20. Snap the lid onto the case.
+21. If using leaded solder, wash your hands and then wipe down the case with a paper towel and throw the towel away afterwards.
 
 ## Flashing
 
