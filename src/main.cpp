@@ -6,8 +6,8 @@
 #define LED_PIN A0
 #define LED_COUNT 100
 
-const char* ssid = "***REMOVED***";
-const char* password = "***REMOVED***";
+const char* ssid = "CHANGEME";
+const char* password = "CHANGEME";
 
 const char* mqtt_server = "192.168.100.42";
 
