@@ -1,5 +1,7 @@
 # RGB Fairy Lights
 
+![aurora](https://user-images.githubusercontent.com/7339800/183792480-e701cb66-6705-4f3b-b7be-084833b12fbd.gif)
+
 This project includes all of the firmware and 3D files to create a driver for the RGB fairy lights sold on Adafruit's store. In order to control this light, you will need to be running [Home Assistant](https://www.home-assistant.io/) on a server at your house along with a [MQTT](https://mqtt.org/) broker and Home Assistant [MQTT Integration](https://www.home-assistant.io/integrations/mqtt/).
 
 ## Materials
