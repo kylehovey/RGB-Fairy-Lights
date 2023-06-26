@@ -1,8 +1,10 @@
+#include <limits>
 #include <Arduino.h>
 #include <Adafruit_NeoPixel.h>
 
 #define LED_PIN A0
 #define LED_COUNT 100
+#define NET_ENABLED
 
 #if (defined(NET_ENABLED))
 #include <PubSubClient.h>
@@ -13,15 +15,15 @@ const char* password = "CHANGEME";
 
 const char* mqtt_server = "192.168.100.76";
 
-const String mqtt_power_command_topic = "home/light/lab_fairy/power/set";
-const String mqtt_rgb_command_topic = "home/light/lab_fairy/rgb/set";
-const String mqtt_brightness_command_topic = "home/light/lab_fairy/brightness/set";
-const String mqtt_effect_command_topic = "home/light/lab_fairy/effect/set";
+const String mqtt_power_command_topic = "home/light/CHANGEME/power/set";
+const String mqtt_rgb_command_topic = "home/light/CHANGEME/rgb/set";
+const String mqtt_brightness_command_topic = "home/light/CHANGEME/brightness/set";
+const String mqtt_effect_command_topic = "home/light/CHANGEME/effect/set";
 
-const String mqtt_power_status_topic = "home/light/lab_fairy/power/status";
-const String mqtt_rgb_status_topic = "home/light/lab_fairy/rgb/status";
-const String mqtt_brightness_status_topic = "home/light/lab_fairy/brightness/status";
-const String mqtt_effect_status_topic = "home/light/lab_fairy/effect/status";
+const String mqtt_power_status_topic = "home/light/CHANGEME/power/status";
+const String mqtt_rgb_status_topic = "home/light/CHANGEME/rgb/status";
+const String mqtt_brightness_status_topic = "home/light/CHANGEME/brightness/status";
+const String mqtt_effect_status_topic = "home/light/CHANGEME/effect/status";
 
 WiFiClient espClient;
 PubSubClient client(espClient);
@@ -34,20 +36,20 @@ Adafruit_NeoPixel strip(LED_COUNT, LED_PIN, NEO_RGB + NEO_KHZ800);
 
 // Adapted from https://stackoverflow.com/a/26233318
 int getHue(int red, int green, int blue) {
-    double minVal = double(min(min(red, green), blue));
-    double maxVal = double(max(max(red, green), blue));
-    double hueVal = 0.0;
+    float minVal = float(min(min(red, green), blue));
+    float maxVal = float(max(max(red, green), blue));
+    float hueVal = 0.0;
 
     if (minVal == maxVal) {
         return 0;
     }
 
     if (maxVal == red) {
-        hueVal = (double(green) - double(blue)) / (maxVal - minVal);
+        hueVal = (float(green) - float(blue)) / (maxVal - minVal);
     } else if (maxVal == green) {
-        hueVal = 2.0 + (double(blue) - double(red)) / (maxVal - minVal);
+        hueVal = 2.0 + (float(blue) - float(red)) / (maxVal - minVal);
     } else {
-        hueVal = 4.0 + (double(red) - double(green)) / (maxVal - minVal);
+        hueVal = 4.0 + (float(red) - float(green)) / (maxVal - minVal);
     }
 
     hueVal = hueVal * 60.0;
@@ -67,18 +69,18 @@ String effect = "fireflies";
 #if (defined(NET_ENABLED))
 void reconnect() {
   while (!client.connected()) {
-    String clientId = "Lab Fairy Lights";
+    String clientId = "Hannah Fairy Lights";
 
     if (client.connect(clientId.c_str())) {
       return;
     } else {
-      delay(5000);
+      delay(1000);
     }
   }
 }
 
 void publishBrightness() {
-  int percentage = round(100.0 * double(brightness) / 255.0);
+  int percentage = round(100.0 * float(brightness) / 255.0);
 
   client.publish(mqtt_brightness_status_topic.c_str(), String(percentage).c_str());
 }
@@ -150,34 +152,34 @@ void init_mqtt() {
 // Array(100).fill().map(() => Math.random()).map(x => x * Math.PI * 2).map(x => x.toFixed(2)).join(',')
 float randomPhases[] = {5.04,5.81,4.95,6.19,2.88,3.42,5.60,2.07,5.27,5.89,0.41,3.66,1.61,4.67,6.05,2.91,3.42,0.36,4.71,5.04,4.26,6.15,1.68,1.53,2.43,6.14,4.38,1.80,0.17,5.15,5.11,1.67,5.03,0.31,5.95,1.95,4.91,1.62,3.57,5.43,4.28,2.52,2.22,2.52,5.18,1.20,0.16,0.99,4.23,5.59,1.39,3.46,1.67,5.61,1.12,5.16,1.79,5.49,1.48,0.84,4.61,0.04,2.81,3.15,3.70,2.97,5.27,3.13,1.98,5.28,2.20,0.65,5.42,5.00,1.45,0.91,2.87,4.02,5.46,4.29,5.61,5.87,0.57,0.57,4.80,1.80,6.05,3.96,1.53,0.81,1.73,6.21,2.25,0.95,0.89,3.15,4.28,4.22,4.76,4.43};
 
-double beegHueFromSmol(double hue) {
+float beegHueFromSmol(float hue) {
   return hue * 65535.0 / 360.0;
 }
 
-double fireflyActivation(double t, double phase = 0) {
-  double E = (sin(t + phase) + cos(5.0*t + phase) - cos(10.0*t + phase) + sin(25.0*t + phase)) / 35.0;
-  double x = 20.0 * sin(0.5 * t + phase) / 0.2;
-  double fire = 2.0 / (1.0 + exp(x * x));
-  double intensity = fire + (1 - fire) * E;
+float fireflyActivation(float t, float phase = 0) {
+  float E = (sin(t + phase) + cos(5.0*t + phase) - cos(10.0*t + phase) + sin(25.0*t + phase)) / 35.0;
+  float x = 20.0 * sin(0.5 * t + phase) / 0.2;
+  float fire = 2.0 / (1.0 + exp(x * x));
+  float intensity = fire + (1 - fire) * E;
 
   return intensity;
 }
 
-uint32_t fireflyHue(double intensity) {
-  double hue = 63.0 * intensity + 262.0 * (1.0 - intensity);
-  double beegHue = beegHueFromSmol(hue);
+uint32_t fireflyHue(float intensity) {
+  float hue = 63.0 * intensity + 262.0 * (1.0 - intensity);
+  float beegHue = beegHueFromSmol(hue);
 
   return uint32_t(beegHue);
 }
 
-double fireflyBrightness(double intensity) {
-  return double(brightness) / (2.0 * (1.0 + exp(-8.0 * (intensity - 0.5)))) + 0.5;
+float fireflyBrightness(float intensity) {
+  return float(brightness) / (2.0 * (1.0 + exp(-8.0 * (intensity - 0.5)))) + 0.5;
 }
 
-uint32_t auroraHue(double t, double phase, double beginningHue, double endingHue) {
-  double intensity = (sin(t + phase) + cos(5.0*t + phase) - cos(10.0*t + phase) + sin(25.0*t + phase)) / 7.05;
-  double hue = endingHue * intensity + beginningHue * (1.0 - intensity);
-  double beegHue = beegHueFromSmol(hue);
+uint32_t auroraHue(float t, float phase, float beginningHue, float endingHue) {
+  float intensity = (sin(t + phase) + cos(5.0*t + phase) - cos(10.0*t + phase) + sin(25.0*t + phase)) / 7.05;
+  float hue = endingHue * intensity + beginningHue * (1.0 - intensity);
+  float beegHue = beegHueFromSmol(hue);
 
   return uint32_t(beegHue);
 }
@@ -228,6 +230,8 @@ void setup() {
 #endif
 }
 
+const unsigned long MAXVAL = std::numeric_limits<unsigned long>::max() / 2;
+
 void effectLoop() {
   if (power == "OFF") {
     strip.fill(strip.Color(0, 0, 0));
@@ -237,45 +241,45 @@ void effectLoop() {
   };
 
 
-  const unsigned long t = millis();
+  const auto t = static_cast<float>(millis() % MAXVAL);
   strip.setBrightness(brightness);
 
   if (effect == "static") {
     strip.fill(strip.Color(r, g, b));
   } else if (effect == "rainbow") {
-    const auto iterations = t % 128000;
+    const auto iterations = millis() % 128000;
     strip.rainbow(round(256.0 * iterations / 100.0));
   } else if (effect == "fireflies") {
-    double pTime = (double)t / 8000.0;
+    float pTime = t / 8000.0;
 
     for (int i = 0; i < LED_COUNT; ++i) {
-      double intensity = fireflyActivation(pTime, randomPhases[i]);
-      double hue = fireflyHue(intensity);
-      double fBrightness = fireflyBrightness(intensity);
+      float intensity = fireflyActivation(pTime, randomPhases[i]);
+      float hue = fireflyHue(intensity);
+      float fBrightness = fireflyBrightness(intensity);
       strip.setPixelColor(i, strip.ColorHSV(hue, 255, round(fBrightness)));
     }
   } else if (effect == "aurora") {
-    double pTime = (double)t / 4000.0;
+    float pTime = t / 4000.0;
 
     for (int i = 0; i < LED_COUNT; ++i) {
-      double hue = auroraHue(pTime, randomPhases[i], 150.0, 220.0);
+      float hue = auroraHue(pTime, randomPhases[i], 150.0, 220.0);
       strip.setPixelColor(i, strip.ColorHSV(hue, 255, brightness));
     }
   } else if (effect == "auroraSettable") {
-    double pTime = (double)t / 4000.0;
+    float pTime = t / 4000.0;
 
     for (int i = 0; i < LED_COUNT; ++i) {
       int deltaHue = 70;
       int startingHue = hue;
       int endingHue = hue + deltaHue % 360;
-      double hue = auroraHue(pTime, randomPhases[i], startingHue, endingHue);
+      float hue = auroraHue(pTime, randomPhases[i], startingHue, endingHue);
       strip.setPixelColor(i, strip.ColorHSV(hue, 255, brightness));
     }
   } else if (effect == "torchlight") {
-    double pTime = (double)t / 3000.0;
+    float pTime = t / 3000.0;
 
     for (int i = 0; i < LED_COUNT; ++i) {
-      double hue = auroraHue(pTime, randomPhases[i], 18.0, 39.0);
+      float hue = auroraHue(pTime, randomPhases[i], 18.0, 39.0);
       strip.setPixelColor(i, strip.ColorHSV(hue, 255, brightness));
     }
   }
