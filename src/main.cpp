@@ -26,11 +26,8 @@ const String mqtt_effect_status_topic = "home/light/lab_fairy/effect/status";
 WiFiClient espClient;
 PubSubClient client(espClient);
 
-// IPAddress local_IP(192, 168, 100, 74);
 IPAddress gateway(192, 168, 100, 1);
 IPAddress subnet(255, 255, 255, 0);
-// IPAddress primaryDNS(1, 1, 1, 1);
-// IPAddress secondaryDNS(1, 0, 0, 1);
 #endif
 
 Adafruit_NeoPixel strip(LED_COUNT, LED_PIN, NEO_RGB + NEO_KHZ800);
